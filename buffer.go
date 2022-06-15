@@ -775,6 +775,10 @@ func (t tokens) slice(find string) []string {
 	return result
 }
 
+func Str(key string) (string, bool) {
+	return str(key)
+}
+
 func str(key string) (string, bool) {
 	bString := []byte(key)
 	from := len(bString)

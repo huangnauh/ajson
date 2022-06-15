@@ -41,6 +41,10 @@ func unquote(s []byte, border byte) (t string, ok bool) {
 	return
 }
 
+func Unquote(s []byte, border byte) (t []byte, ok bool) {
+	return unquoteBytes(s, border)
+}
+
 func unquoteBytes(s []byte, border byte) (t []byte, ok bool) {
 	if len(s) < 2 || s[0] != border || s[len(s)-1] != border {
 		return
