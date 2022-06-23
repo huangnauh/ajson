@@ -102,6 +102,42 @@ func (n *Node) AppendArray(value ...*Node) error {
 	return nil
 }
 
+func (n *Node) InsertArray(index int, value ...*Node) error {
+	if !n.IsArray() {
+		return errorType()
+	}
+	length := len(n.children)
+	if index > length {
+		return errorRequest("index out of bounds")
+	}
+	if index < 0 {
+		index += length
+	}
+	if index < 0 {
+		return errorRequest("index out of bounds")
+	}
+	for i := length + len(value) - 1; i >= index+len(value); i-- {
+		node := n.children[strconv.Itoa(i-len(value))]
+		node.index = &i
+		n.children[strconv.Itoa(i)] = node
+	}
+
+	for i := index; i < index+len(value); i++ {
+		node := value[i-index]
+		if node.parent != nil {
+			if err := node.parent.remove(node); err != nil {
+				return err
+			}
+		}
+		node.parent = n
+		node.key = nil
+		node.index = &i
+		n.children[strconv.Itoa(i)] = node
+	}
+	n.mark()
+	return nil
+}
+
 // AppendObject appends current Object node value with key:value
 func (n *Node) AppendObject(key string, value *Node) error {
 	if !n.IsObject() {
@@ -127,6 +163,51 @@ func (n *Node) DeleteKey(key string) error {
 		return err
 	}
 	return n.remove(node)
+}
+
+func (n *Node) TrimIndex(start, end int) (bool, error) {
+	if n._type != Array {
+		return false, errorType()
+	}
+	length := len(n.children)
+	if length == 0 {
+		return false, nil
+	}
+	if start < 0 {
+		start = len(n.children) + start
+	}
+	if end < 0 {
+		end = len(n.children) + end
+	}
+	clear := start >= len(n.children) || end < start
+
+	if start < 0 {
+		start = 0
+	}
+
+	if end < 0 {
+		end = 0
+	}
+
+	n.mark()
+	for i := 0; i < start; i++ {
+		delete(n.children, strconv.Itoa(i))
+	}
+	if clear {
+		return true, nil
+	}
+	if start > 0 {
+		for i := start; i <= end; i++ {
+			node := n.children[strconv.Itoa(i)]
+			cur := i - start
+			node.index = &cur
+			n.children[strconv.Itoa(cur)] = node
+		}
+	}
+	for i := end + 1; i < len(n.children); i++ {
+		delete(n.children, strconv.Itoa(i))
+	}
+	return length != len(n.children), nil
 }
 
 // PopKey removes element from Object, by it's key and return it
