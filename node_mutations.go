@@ -174,12 +174,12 @@ func (n *Node) TrimIndex(start, end int) (bool, error) {
 		return false, nil
 	}
 	if start < 0 {
-		start = len(n.children) + start
+		start += length
 	}
 	if end < 0 {
-		end = len(n.children) + end
+		end += length
 	}
-	clear := start >= len(n.children) || end < start
+	clear := start >= length || end < start
 
 	if start < 0 {
 		start = 0
@@ -190,10 +190,8 @@ func (n *Node) TrimIndex(start, end int) (bool, error) {
 	}
 
 	n.mark()
-	for i := 0; i < start; i++ {
-		delete(n.children, strconv.Itoa(i))
-	}
 	if clear {
+		n.children = make(map[string]*Node)
 		return true, nil
 	}
 	if start > 0 {
@@ -204,7 +202,7 @@ func (n *Node) TrimIndex(start, end int) (bool, error) {
 			n.children[strconv.Itoa(cur)] = node
 		}
 	}
-	for i := end + 1; i < len(n.children); i++ {
+	for i := end - start + 1; i < length; i++ {
 		delete(n.children, strconv.Itoa(i))
 	}
 	return length != len(n.children), nil
@@ -268,6 +266,48 @@ func (n *Node) clone() *Node {
 		node.children[key] = value.clone()
 	}
 	return node
+}
+
+func (n *Node) Clear() (bool, error) {
+	switch n._type {
+	case Null, Bool, String:
+		return false, nil
+	case Array, Object:
+		if len(n.children) == 0 {
+			return false, nil
+		}
+		n.children = make(map[string]*Node)
+	// case Bool:
+	// 	b, err := n.GetBool()
+	// 	if err != nil {
+	// 		return false, err
+	// 	}
+	// 	if !b {
+	// 		return false, nil
+	// 	}
+	// 	n.value.Store(false)
+	case Numeric:
+		b, err := n.GetNumeric()
+		if err != nil {
+			return false, err
+		}
+		var zero float64
+		if b == zero {
+			return false, nil
+		}
+		n.value.Store(zero)
+		// case String:
+		// 	b, err := n.GetString()
+		// 	if err != nil {
+		// 		return false, err
+		// 	}
+		// 	if b == "" {
+		// 		return false, nil
+		// 	}
+		// 	n.value.Store("")
+	}
+	n.mark()
+	return true, nil
 }
 
 // update method updates stored value, with validations
